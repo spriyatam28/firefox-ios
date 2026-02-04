@@ -2016,7 +2016,8 @@ class BrowserViewController: UIViewController,
             return
         }
 
-        if webView.url == nil {
+        // TODO: FXIOS-14783 - Investigate proper solution to needsReload
+        if webView.url == nil, selectedTab.url?.absoluteString != "about:blank" {
             // The web view can go gray if it was zombified due to memory pressure.
             // When this happens, the URL is nil, so try restoring the page upon selection.
             logger.log("Webview was zombified, reloading before showing", level: .debug, category: .lifecycle)
@@ -4726,7 +4727,8 @@ extension BrowserViewController: TabManagerDelegate {
             needsReload = false
         }
 
-        if needsReload {
+        // TODO: FXIOS-14783 - Investigate proper solution to needsReload
+        if needsReload, selectedTab.url?.absoluteString != "about:blank" {
             selectedTab.reloadPage()
         }
     }

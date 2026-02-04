@@ -68,6 +68,9 @@ extension BrowserViewController: WKUIDelegate {
         // Set new tab url to about:blank because webViews created through this callback are always popups
         newTab.url = URL(string: "about:blank")
 
+        // Select the new tab immediately
+        tabManager.selectTab(newTab)
+
         return newTab.webView
     }
 
@@ -466,6 +469,7 @@ extension BrowserViewController: WKNavigationDelegate {
             decisionHandler(.cancel)
             return
         }
+
         if tab == tabManager.selectedTab,
            navigationAction.navigationType == .linkActivated,
            !tab.adsTelemetryUrlList.isEmpty {
@@ -645,7 +649,9 @@ extension BrowserViewController: WKNavigationDelegate {
     private func handleStoreURLNavigation(url: URL) {
         // Make sure to wait longer than delaySelectingNewPopupTab to ensure selectedTab is correct
         // Otherwise the AppStoreAlert is shown on the wrong tab
-        let delay: DispatchTime = .now() + tabManager.delaySelectingNewPopupTab + 0.1
+        // TODO: FXIOS-14796 - Investigate if we can remove the handleStoreURLNavigation delay
+        let delaySelectingNewPopupTab: TimeInterval = 0.2
+        let delay: DispatchTime = .now() + delaySelectingNewPopupTab
         DispatchQueue.main.asyncAfter(deadline: delay) { [weak self] in
             self?.showAppStoreAlert { isOpened in
                 if isOpened {
