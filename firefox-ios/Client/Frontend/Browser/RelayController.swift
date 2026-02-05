@@ -130,12 +130,14 @@ final class RelayController: RelayControllerProtocol, Notifiable {
         self.logger = logger
         self.profile = profile
         let isStaging = profile.prefs.boolForKey(PrefsKeys.UseStageServer) ?? false
+        logger.log("Relay server: \(isStaging ? "staging" : "prod")", level: .info, category: .relay)
         self.config = isStaging ? .staging : .prod
         self.notificationCenter = notificationCenter
         self.telemetry = RelayMaskTelemetry(gleanWrapper: gleanWrapper)
 
         configureRelayRSClient()
         beginObserving()
+        performPostLaunchUpdate()
     }
 
     // MARK: - RelayControllerProtocol
@@ -242,6 +244,16 @@ final class RelayController: RelayControllerProtocol, Notifiable {
 
     // MARK: - Private Utilities
 
+    private func performPostLaunchUpdate() {
+        let postLaunchDelay: TimeInterval = 5.0
+        Timer.scheduledTimer(withTimeInterval: postLaunchDelay, repeats: false) { [weak self] _ in
+            self?.logger.log("Will perform Relay post-launch refresh.", level: .info, category: .relay)
+            Task { @MainActor in
+                self?.updateRelayAccountStatus()
+            }
+        }
+    }
+
     private func invalidateClient() {
         client = nil
     }
@@ -306,7 +318,6 @@ final class RelayController: RelayControllerProtocol, Notifiable {
             withNotificationCenter: notificationCenter,
             forObserver: self,
             observing: [Notification.Name.ProfileDidStartSyncing,
-                        Notification.Name.ProfileDidFinishSyncing,
                         Notification.Name.FirefoxAccountChanged]
         )
     }
@@ -321,6 +332,7 @@ final class RelayController: RelayControllerProtocol, Notifiable {
     private func updateRelayAccountStatus() {
         guard Self.isFeatureEnabled else { return }
         guard profile.hasAccount() else {
+            logger.log("No sync account. Relay disabled.", level: .info, category: .relay)
             accountStatus = .unavailable
             return
         }
