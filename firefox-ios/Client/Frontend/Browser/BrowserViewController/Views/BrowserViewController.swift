@@ -534,6 +534,13 @@ class BrowserViewController: UIViewController,
         }
     }
 
+    private lazy var browserLayoutManager: BrowserViewControllerLayoutManager = {
+        return BrowserViewControllerLayoutManager(
+            parentView: view,
+            headerView: header
+        )
+    }()
+
     init(
         profile: Profile,
         tabManager: TabManager,
@@ -659,12 +666,11 @@ class BrowserViewController: UIViewController,
     func searchBarPositionDidChange(newSearchBarPosition: SearchBarPosition?) {
         guard let newSearchBarPosition else { return }
 
-        let searchBarView: TopBottomInterchangeable = addressToolbarContainer
         let newPositionIsBottom = newSearchBarPosition == .bottom
         let newParent = newPositionIsBottom ? overKeyboardContainer : header
 
-        searchBarView.removeFromParent()
-        searchBarView.addToParent(parent: newParent, addToTop: !newPositionIsBottom)
+        addressToolbarContainer.removeFromParent()
+        addressToolbarContainer.addToParent(parent: newParent, addToTop: !newPositionIsBottom)
 
         if isSwipingTabsEnabled {
             webPagePreview.invalidateScreenshotData()
@@ -678,7 +684,7 @@ class BrowserViewController: UIViewController,
         isBottomSearchBar = newPositionIsBottom
         updateViewConstraints()
         updateHeaderConstraints()
-        searchBarView.updateConstraints()
+        addressToolbarContainer.updateConstraints()
         updateMicrosurveyConstraints()
         updateToolbarDisplay()
         if isToolbarTranslucencyRefactorEnabled {
@@ -1682,6 +1688,7 @@ class BrowserViewController: UIViewController,
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
+
         DispatchQueue.main.async { [self] in
             // Only update position if device size class changed (rotation, split view, etc.)
             // Skip other trait changes like Dark Mode, App Moving to Background State that don't affect layout.
@@ -1753,7 +1760,12 @@ class BrowserViewController: UIViewController,
             ])
         }
 
-        updateHeaderConstraints()
+        if isSnapKitRemovalEnabled {
+            browserLayoutManager.setScrollController(scrollController as? LegacyTabScrollProvider)
+            browserLayoutManager.setupHeaderConstraints(isBottomSearchBar: isBottomSearchBar)
+        } else {
+            updateHeaderConstraints()
+        }
         setupBlurViews()
     }
 
@@ -1783,11 +1795,17 @@ class BrowserViewController: UIViewController,
             backgroundView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
-    // MARK: - Snapkit related
 
+    // MARK: - Snapkit related
     private func updateHeaderConstraints() {
+        guard !isSnapKitRemovalEnabled else {
+            browserLayoutManager.updateHeaderConstraints(isBottomSearchBar: isBottomSearchBar)
+            return
+        }
+
         let isNavToolbar = toolbarHelper.shouldShowNavigationToolbar(for: traitCollection)
         let shouldShowTopTabs = toolbarHelper.shouldShowTopTabs(for: traitCollection)
+
         header.snp.remakeConstraints { make in
             // TODO: [iOS 26 Bug] - Remove this workaround when Apple fixes safe area inset updates.
             // Bug: Safe area top inset doesn't update correctly on landscape rotation (remains 20pt)
@@ -1805,7 +1823,8 @@ class BrowserViewController: UIViewController,
                 make.height.equalTo(0)
             } else {
                 if let scrollController = scrollController as? LegacyTabScrollProvider {
-                    scrollController.headerTopConstraint = make.top.equalTo(topConstraint).constraint
+                    let topConstraint = make.top.equalTo(topConstraint).constraint
+                    scrollController.headerTopConstraint = ConstraintReference(snapKit: topConstraint)
                 } else {
                     headerTopConstraint = make.top.equalTo(topConstraint).constraint
                 }
