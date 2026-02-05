@@ -1946,6 +1946,10 @@ class BrowserViewController: UIViewController,
     func frontEmbeddedContent(_ viewController: ContentContainable) {
         contentContainer.update(content: viewController)
         statusBarOverlay.resetState(isHomepage: contentContainer.hasHomepage)
+
+        // Documentation found in https://mozilla-hub.atlassian.net/browse/FXIOS-10952
+        // FXIOS-11036 - Investigate improvement to JavaScript alert dequeueing
+        checkForJSAlerts()
     }
 
     /// Embed a ContentContainable inside the content container
@@ -5033,8 +5037,8 @@ extension BrowserViewController: KeyboardHelperDelegate {
 
 // MARK: JSPromptAlertControllerDelegate
 
-extension BrowserViewController: WKJavascriptPromptAlertControllerDelegate {
-    func promptAlertControllerDidDismiss(_ alertController: WKJavaScriptPromptAlertController) {
+extension BrowserViewController: JavascriptPromptAlertControllerDelegate {
+    func promptAlertControllerDidDismiss(_ alertController: JavaScriptPromptAlertController) {
         logger.log("JS prompt was dismissed. Will dequeue next alert.",
                    level: .info,
                    category: .webview)
