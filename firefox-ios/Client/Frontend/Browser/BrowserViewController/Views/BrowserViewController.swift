@@ -1852,7 +1852,7 @@ class BrowserViewController: UIViewController,
         }
     }
 
-    private func updateOverKeyboardContainerConstraints() {
+    func updateOverKeyboardContainerConstraints() {
         overKeyboardContainer.snp.remakeConstraints { make in
             if let scrollController = scrollController as? LegacyTabScrollProvider {
                 scrollController.overKeyboardContainerConstraint = make.bottom.equalTo(bottomContainer.snp.top).constraint
@@ -2121,7 +2121,9 @@ class BrowserViewController: UIViewController,
         }
 
         microsurvey.applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-        updateViewConstraints()
+        if !isSnapKitRemovalEnabled {
+            updateViewConstraints()
+        }
     }
 
     private func createMicrosurveyPrompt(with state: MicrosurveyPromptState) {
