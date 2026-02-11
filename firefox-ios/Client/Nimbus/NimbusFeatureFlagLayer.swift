@@ -136,6 +136,9 @@ final class NimbusFeatureFlagLayer: Sendable {
         case .hostedSummarizerShakeGesture:
            return checkHostedSummarizerShakeGesture(from: nimbus)
 
+        case .summarizerAppAttestAuth:
+            return checkAppleSummarizerFeature(from: nimbus)
+
         case .toolbarRefactor:
             return checkToolbarRefactorFeature(from: nimbus)
 
@@ -493,6 +496,10 @@ final class NimbusFeatureFlagLayer: Sendable {
 
     private func checkHostedSummarizerShakeGesture(from nimbus: FxNimbus) -> Bool {
         return nimbus.features.hostedSummarizerFeature.value().shakeGesture
+    }
+
+    private func checkSummarizerAppAttestAuthFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.summarizerAppAttestAuthFeature.value().enabled
     }
 
     private func checkMondernOnboardingUIFeature(from nimbus: FxNimbus) -> Bool {
