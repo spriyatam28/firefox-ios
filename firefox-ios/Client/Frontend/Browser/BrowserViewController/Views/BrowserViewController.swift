@@ -108,6 +108,7 @@ class BrowserViewController: UIViewController,
     var zoomPageBar: ZoomPageBar?
     var addressBarPanGestureHandler: AddressBarPanGestureHandler?
     var microsurvey: MicrosurveyPromptView?
+    // TODO: FXIOS-14347 Remove this property as part of cleaning up the toolbar performance
     var keyboardBackdrop: UIView?
     var pendingToast: Toast? // A toast that might be waiting for BVC to appear before displaying
     var downloadToast: DownloadToast? // A toast that is showing the combined download progress
@@ -2273,20 +2274,22 @@ class BrowserViewController: UIViewController,
 
         guard let searchController = self.searchController else { return }
 
-        // This needs to be added to ensure during animation of the keyboard,
-        // No content is showing in between the bottom search bar and the searchViewController
-        if isBottomSearchBar, keyboardBackdrop == nil {
-            keyboardBackdrop = UIView()
-            keyboardBackdrop?.backgroundColor = currentTheme().colors.layer1
-            view.insertSubview(keyboardBackdrop!, belowSubview: overKeyboardContainer)
-            if isSnapKitRemovalEnabled {
-                setupKeyboardBackdropConstraints(for: keyboardBackdrop)
-            } else {
-                keyboardBackdrop?.snp.makeConstraints { make in
-                    make.edges.equalTo(view)
+        if !isToolbarTranslucencyRefactorEnabled {
+            // This needs to be added to ensure during animation of the keyboard,
+            // No content is showing in between the bottom search bar and the searchViewController
+            if isBottomSearchBar, keyboardBackdrop == nil {
+                keyboardBackdrop = UIView()
+                keyboardBackdrop?.backgroundColor = currentTheme().colors.layer1
+                view.insertSubview(keyboardBackdrop!, belowSubview: overKeyboardContainer)
+                if isSnapKitRemovalEnabled {
+                    setupKeyboardBackdropConstraints(for: keyboardBackdrop)
+                } else {
+                    keyboardBackdrop?.snp.makeConstraints { make in
+                        make.edges.equalTo(view)
+                    }
                 }
+                view.bringSubviewToFront(bottomContainer)
             }
-            view.bringSubviewToFront(bottomContainer)
         }
 
         addChild(searchController)
@@ -2328,8 +2331,10 @@ class BrowserViewController: UIViewController,
         searchController.view.removeFromSuperview()
         searchController.removeFromParent()
 
-        keyboardBackdrop?.removeFromSuperview()
-        keyboardBackdrop = nil
+        if !isToolbarTranslucencyRefactorEnabled {
+            keyboardBackdrop?.removeFromSuperview()
+            keyboardBackdrop = nil
+        }
 
         contentContainer.accessibilityElementsHidden = false
     }
@@ -3921,7 +3926,10 @@ class BrowserViewController: UIViewController,
         let currentTheme = currentTheme()
         statusBarOverlay.hasTopTabs = toolbarHelper.shouldShowTopTabs(for: traitCollection)
         statusBarOverlay.applyTheme(theme: currentTheme)
-        keyboardBackdrop?.backgroundColor = currentTheme.colors.layer1
+
+        if !isToolbarTranslucencyRefactorEnabled {
+            keyboardBackdrop?.backgroundColor = currentTheme.colors.layer1
+        }
 
         // to make sure on homepage with bottom search bar the status bar is hidden
         // we have to adjust the background color to match the homepage background color
