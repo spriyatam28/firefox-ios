@@ -668,11 +668,11 @@ class BrowserViewController: UIViewController,
     func searchBarPositionDidChange(newSearchBarPosition: SearchBarPosition?) {
         guard let newSearchBarPosition else { return }
 
-        let newPositionIsBottom = newSearchBarPosition == .bottom
-        let newParent = newPositionIsBottom ? overKeyboardContainer : header
+        isBottomSearchBar = newSearchBarPosition == .bottom
+        let newParent = isBottomSearchBar ? overKeyboardContainer : header
 
         addressToolbarContainer.removeFromParent()
-        addressToolbarContainer.addToParent(parent: newParent, addToTop: !newPositionIsBottom)
+        addressToolbarContainer.addToParent(parent: newParent, addToTop: !isBottomSearchBar)
 
         if isSwipingTabsEnabled {
             webPagePreview.invalidateScreenshotData()
@@ -680,10 +680,9 @@ class BrowserViewController: UIViewController,
 
         if let readerModeBar = readerModeBar {
             readerModeBar.removeFromParent()
-            readerModeBar.addToParent(parent: newParent, addToTop: newSearchBarPosition == .bottom)
+            readerModeBar.addToParent(parent: newParent, addToTop: isBottomSearchBar)
         }
 
-        isBottomSearchBar = newPositionIsBottom
         updateViewConstraints()
         updateHeaderConstraints()
         addressToolbarContainer.updateConstraints()
@@ -700,6 +699,8 @@ class BrowserViewController: UIViewController,
             actionType: GeneralBrowserMiddlewareActionType.toolbarPositionChanged)
         store.dispatch(action)
         updateSwipingTabs()
+
+        searchController?.viewModel.updateBottomSearchBarState(isBottomSearchBar: isBottomSearchBar)
     }
 
     private func updateToolbarDisplay(scrollOffset: CGFloat? = nil, shouldUpdateBlurViews: Bool = true) {
